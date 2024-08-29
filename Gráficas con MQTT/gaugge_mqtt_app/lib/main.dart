@@ -1,5 +1,6 @@
+import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:gaugge_mqtt_app/mqtt_service.dart';
 import 'package:syncfusion_flutter_gauges/gauges.dart';
 
 void main() {
@@ -12,7 +13,7 @@ class MainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Gauge MQTT App',
+      title: 'Gauge Random Value App',
       theme: ThemeData(primarySwatch: Colors.blue),
       home: const GaugeScreen(),
       debugShowCheckedModeBanner: false,
@@ -28,43 +29,62 @@ class GaugeScreen extends StatefulWidget {
 }
 
 class _GaugeScreenState extends State<GaugeScreen> {
-  late MqttService _mqttService;
-  double _temperature = 0.0;
+  double _value = 0.0;
+  late Timer _timer;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Generar un nuevo valor aleatorio cada segundo
+    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
+      setState(() {
+        _value = Random().nextDouble() *
+            100; // Generar un valor aleatorio entre 0 y 100
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel(); // Cancelar el temporizador cuando se destruye el widget
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Temperature Gauge'),
+        title: const Text('Random Value Gauge'),
       ),
       body: Center(
         child: SfRadialGauge(
           axes: <RadialAxis>[
             RadialAxis(
-              minimum: -20,
-              maximum: 50,
+              minimum: 0,
+              maximum: 100, // Ajustado para el rango de 0 a 100
               ranges: <GaugeRange>[
                 GaugeRange(
-                  startValue: -20,
-                  endValue: 0,
+                  startValue: 0,
+                  endValue: 33,
                   color: Colors.blue,
                 ),
                 GaugeRange(
-                  startValue: 0,
-                  endValue: 25,
+                  startValue: 33,
+                  endValue: 66,
                   color: Colors.green,
                 ),
                 GaugeRange(
-                  startValue: 25,
-                  endValue: 50,
+                  startValue: 66,
+                  endValue: 100,
                   color: Colors.red,
                 )
               ],
-              pointers: <GaugePointer>[NeedlePointer(value: _temperature)],
+              pointers: <GaugePointer>[NeedlePointer(value: _value)],
               annotations: <GaugeAnnotation>[
                 GaugeAnnotation(
                   widget: Text(
-                    '$_temperature°C',
+                    '${_value.toStringAsFixed(2)}',
                     style: const TextStyle(
                         fontSize: 20, fontWeight: FontWeight.bold),
                   ),
@@ -77,17 +97,5 @@ class _GaugeScreenState extends State<GaugeScreen> {
         ),
       ),
     );
-  }
-
-  @override
-  void initState() {
-    super.initState();
-
-    _mqttService = MqttService('broker.emqx.io', '');
-    _mqttService.getTemperatureStream().listen((temperature) {
-      setState(() {
-        _temperature = temperature;
-      });
-    });
   }
 }
